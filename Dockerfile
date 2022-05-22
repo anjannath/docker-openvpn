@@ -1,3 +1,12 @@
+FROM golang:1.17 AS builder
+
+ENV SOURCE_PATH ${GOPATH}/src/0xacab.org/leap/obfsvpn
+WORKDIR ${SOURCE_PATH}
+RUN pwd
+RUN git clone https://0xacab.org/leap/obfsvpn.git . && \
+    cd server && make build && cp server test_data/obfs4.json /
+
+
 FROM alpine:3.14.1
 
 LABEL maintainer="Alexander Litvinenko <array.shift@yahoo.com>"
@@ -7,6 +16,9 @@ ENV APP_INSTALL_PATH /opt/${APP_NAME}
 ENV APP_PERSIST_DIR /opt/${APP_NAME}_data
 
 WORKDIR ${APP_INSTALL_PATH}
+
+COPY --from=builder /server /usr/local/bin/obfsvpn-server
+COPY --from=builder /obfs4.json /opt/obfs4.json
 
 COPY scripts .
 COPY config ./config
@@ -24,9 +36,7 @@ RUN apk add --no-cache openvpn easy-rsa bash netcat-openbsd zip dumb-init && \
     cd ${APP_INSTALL_PATH} && \
     cp config/server.conf /etc/openvpn/server.conf
 
-
-EXPOSE 1194/udp
-EXPOSE 8080/tcp
+EXPOSE 4430/tcp
 
 VOLUME [ "/opt/Dockovpn_data" ]
 
